@@ -190,12 +190,155 @@ Give the full name sof the specific customers with the most truck lessons at
 that specific location.  
 Give all the queries as well, remember that as long as the answer is the same 
 it's all good. Explain on all queries what you're doing.*/
-SELECT location.name, COUNT(driving_license.license) AS "Most lessons being taken"
+SELECT customer.name, customer.first_name, location.name, COUNT(driving_license.license) AS lessons_passed
 FROM rijschool.lesson
 INNER JOIN rijschool.location ON lesson.location_id = location.id
 INNER JOIN rijschool.vehicle ON lesson.vehicle_id = vehicle.id
 INNER JOIN rijschool.driving_license ON vehicle.license_id = driving_license.id
 INNER JOIN rijschool.customer ON lesson.customer_id_practical_course = customer.id
 WHERE driving_license.license = 'C'
-GROUP BY location.name
-ORDER BY 2 DESC;
+GROUP BY customer.name, customer.first_name, location.name
+ORDER BY COUNT(driving_license.license) DESC;
+-------------------------------------------------------------------------------------------
+/*Which cars have an automatic transmission? Can you show all the details 
+like below? We don't need the id of the cars. 
+Make sure It's sorted as followed, order alphabetically by the brand: 
+Give us the query & give us the brand & model of the 15th row. */
+SELECT vehicle.brand, vehicle.model, vehicle.license_id, driving_license.license, driving_license.transmission
+FROM rijschool.vehicle
+INNER JOIN rijschool.driving_license 
+ON vehicle.license_id = driving_license.id
+WHERE driving_license.license = 'B' AND driving_license.transmission = 'Automatic' AND vehicle.model = 'Prius'
+ORDER BY vehicle.brand
+-------------------------------------------------------------------------------------------
+/*Retrieve information about vehicles with license plates that end with '99' 
+and start with 'M'. Post query.*/
+SELECT *
+FROM rijschol.vehicle 
+WHERE vehicle.license_plate LIKE '%99' AND vehicle.license_plate LIKE 'M%';
+-------------------------------------------------------------------------------------------
+/*Retrieve information about driving licenses that have corresponding entries 
+in the 'driving_license' table, including the brand, model, driving license ID, 
+license, and transmission details.  
+Filter the results to include only the driving licenses where the associated 
+vehicle information in the 'vehicle' table is missing. Assume the schema is 
+'r0800982_rijschool,' and tables include 'vehicle' and 'driving_license. 
+Include only the answers, that are sorted like this. 
+For example : Ford, Mustang, 2, B, Manual*/
+SELECT vehicle.brand, vehicle.model, driving_license.id, driving_license.license, driving_license.transmission
+FROM rijschool.vehicle
+INNER JOIN rijschool.driving_license
+ON vehicle.license_id = driving_license.id
+-------------------------------------------------------------------------------------------
+/*Look up information such as the customer's full name, driving license ID, 
+license type, and transmission. Only include entries where the driving license 
+has a license type of 'T'. Display the results ordered by the customer's last 
+name, limiting the output to 5 records. 
+You should be able to give the full query, but also send as an answer the last 2 
+data rows. It should look as mentioned below.*/
+SELECT customer.name, customer.first_name, driving_license.id, driving_license.license, driving_license.transmission
+FROM rijschool.customer
+INNER JOIN rijschool.customer_driving_license
+ON customer.id = customer_driving_license.customer_id
+INNER JOIN rijschool.driving_license
+ON customer_driving_license.driving_license_id = driving_license.id
+WHERE driving_license.license = 'T'
+ORDER BY customer.name
+LIMIT 5
+-------------------------------------------------------------------------------------------
+/*Achieve this specific result. Which client does it relate to?  
+Get the query but also give the answer to the question.*/
+SELECT lesson.date, lesson.practical, lesson.employee_id_teacher, lesson.subject_id, subject.title
+FROM rijschool.lesson 
+INNER JOIN rijschool.subject 
+ON lesson.subject_id = subject.id
+WHERE lesson.date ='2024-06-29' 
+AND lesson.practical = true 
+AND lesson.employee_id_teacher is null
+-------------------------------------------------------------------------------------------
+/*Imagine you have to update all subject id’s with id: 500 where practical is 
+true & you also have to update the model of the vehicle called ‘R1M’ to R6. 
+How would you do that? Don’t run the query, just give the answer.*/
+UPDATE rijschool.lesson
+SET subject_id = 500
+WHERE practical = true
+
+UPDATE rijschool.vehicle
+SET model = 'R6'
+WHERE model = 'R1M'
+-------------------------------------------------------------------------------------------
+/*Display all the names of the needed and the for licenses from the table 
+license_requires_license. Put the query necessary.*/
+SELECT DL1.id AS driving_license_id_for,
+DL1.license AS driving_license_for,
+DL2.id AS driving_license_id_needed,
+DL2.license AS driving_license_needed
+FROM rijschool.license_requires_license LRL
+INNER JOIN rijschool.driving_license DL1
+ON LRL.driving_license_id_for = DL1.id
+INNER JOIN rijschool.driving_license DL2
+ON DL2.id = LRL.driving_license_id_needed
+-------------------------------------------------------------------------------------------
+/*Retrieve information about lessons held in a specific classroom 
+(classroom_id = 103) and their corresponding subjects.  
+Display the maximum number of participants allowed for each subject 
+(max_nr_of_participants), the classroom ID, and the count of lessons 
+conducted in that classroom.  
+Filter the results to include only those with a maximum number of participants 
+greater than or equal to 10.  
+Finally, order the results by the maximum number of participants in descending 
+order.*/
+SELECT lesson.classroom_id, subject.max_nr_of_participants, COUNT(lesson.classroom_id)
+FROM rijschool.lesson
+INNER JOIN rijschool.subject ON lesson.subject_id = subject.id
+WHERE classroom_id = 103 AND subject.max_nr_of_participants >= 10
+GROUP BY subject.max_nr_of_participants, lesson.classroom_id 
+ORDER BY subject.max_nr_of_participants DESC;
+-------------------------------------------------------------------------------------------
+/*Retrieve information about the total number of theoretical lessons. 
+Give the average number of theoretical lessons across subjects with subject_id 
+35 and 65. Ensure the results are grouped by subject_id and ordered by the 
+total number of theoretical lessons in descending order. 
+Give the query.*/
+SELECT lesson.subject_id,
+    COUNT(*) AS total_theoretical_lessons,
+    ROUND(AVG(COUNT(*)) OVER ()) AS average_theoretical_lessons
+FROM rijschool.lesson
+WHERE lesson.theoretical = true AND subject_id IN (35, 65)
+GROUP BY lesson.subject_id
+ORDER BY total_theoretical_lessons DESC;
+-------------------------------------------------------------------------------------------
+/*Retrieve information about customers who have not passed the theory 
+exam. Display the first name, full name, theory exam status, and the total number of 
+failed theory lessons for the top 5 customers with the highest count of failed theory lessons.  
+Additionally, calculate the average number of failed theory lessons among these top 5 customers.  
+Give only the query.*/
+SELECT customer.first_name, customer.name, customer.passed_theory_exam, location.name, COUNT(*) AS failed
+FROM rijschool.lesson
+INNER JOIN rijschool.location 
+ON lesson.location_id = location.id
+INNER JOIN rijschool.customer_following_theory_lesson 
+ON lesson.id = customer_following_theory_lesson.lesson_id
+INNER JOIN rijschool.customer
+ON customer_following_theory_lesson.customer_id = customer.id
+WHERE customer.passed_theory_exam = false
+GROUP BY customer.first_name, customer.name, customer.passed_theory_exam, location.name
+ORDER BY COUNT(*) DESC
+LIMIT 5;
+
+--Calculate the average for the top 5 rows
+SELECT ROUND(AVG(failed)) AS "Average lessons top 5"
+FROM (
+	SELECT customer.first_name, customer.name, customer.passed_theory_exam, location.name, COUNT(*) AS failed
+	FROM rijschool.lesson
+	INNER JOIN rijschool.location 
+	ON lesson.location_id = location.id
+	INNER JOIN rijschool.customer_following_theory_lesson 
+	ON lesson.id = customer_following_theory_lesson.lesson_id
+	INNER JOIN rijschool.customer
+	ON customer_following_theory_lesson.customer_id = customer.id
+	WHERE customer.passed_theory_exam = false
+	GROUP BY customer.first_name, customer.name, customer.passed_theory_exam, location.name
+	ORDER BY COUNT(*) DESC
+	LIMIT 5
+)AS top_5
